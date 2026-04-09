@@ -1,7 +1,7 @@
 import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
 import Message from "../models/Message.js";
-import Conversation from "../models/conversation.js";
+import Conversation from "../models/Conversation.js";
 import cloudinary from "./cloudinary.js";
 
 const initSocket = (httpServer) => {
