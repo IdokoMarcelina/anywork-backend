@@ -1,9 +1,9 @@
 import { Resend } from "resend";
 
 const sendOtpEmail = async (email, otp) => {
-  const resend = new Resend(process.env.RESEND_API_KEY); 
+  const resend = new Resend(process.env.RESEND_API_KEY);
 
-  await resend.emails.send({
+  const { data, error } = await resend.emails.send({
     from: process.env.EMAIL_FROM,
     to: email,
     subject: "Verify your Anywork account",
@@ -17,6 +17,13 @@ const sendOtpEmail = async (email, otp) => {
       </div>
     `,
   });
+
+  if (error) {
+    console.error("Resend error:", error); // ← will show in Render logs
+    throw new Error(error.message);
+  }
+
+  console.log("Email sent:", data); // ← confirm it sent
 };
 
 export default sendOtpEmail;
