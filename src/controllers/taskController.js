@@ -1,18 +1,23 @@
 import Task, { TASK_CATEGORIES } from "../models/Task.js";
 import User from "../models/User.js";
 
-// POST /api/tasks - post a task
+/// ================= POST TASK =================
 export const postTask = async (req, res) => {
   try {
     const { category, description, budget, location, deadline } = req.body;
     const userId = req.user.id;
 
     if (!TASK_CATEGORIES.includes(category)) {
-      return res.status(400).json({ message: "Invalid category", validCategories: TASK_CATEGORIES });
+      return res.status(400).json({
+        message: "Invalid category",
+        validCategories: TASK_CATEGORIES,
+      });
     }
 
     if (!budget?.amount || !budget?.type) {
-      return res.status(400).json({ message: "Budget amount and type are required" });
+      return res
+        .status(400)
+        .json({ message: "Budget amount and type are required" });
     }
 
     const task = await Task.create({
@@ -30,14 +35,12 @@ export const postTask = async (req, res) => {
       message: "Task posted successfully",
       task,
     });
-
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-
-// GET /api/tasks - get all tasks (all tasks page)
+/// ================= GET ALL TASKS =================
 export const getAllTasks = async (req, res) => {
   try {
     const { category, status } = req.query;
@@ -48,169 +51,110 @@ export const getAllTasks = async (req, res) => {
 
     const tasks = await Task.find(filter)
       .populate("poster", "name avatar")
-      .populate("acceptedBy", "name avatar")
+      .populate("assignedTo", "name avatar") // ✅ FIXED
       .sort({ createdAt: -1 });
 
     res.json({ tasks });
-
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-
-// GET /api/tasks/my-posted - get all tasks posted by logged in user
+/// ================= MY POSTED TASKS =================
 export const getMyPostedTasks = async (req, res) => {
   try {
     const tasks = await Task.find({ poster: req.user.id })
-      .populate("acceptedBy", "name avatar")
+      .populate("assignedTo", "name avatar") // ✅ FIXED
       .sort({ createdAt: -1 });
 
-    if (tasks.length === 0) {
-      return res.json({ message: "No tasks found" });
-    }
-
     res.json({ tasks });
-
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-
-// GET /api/tasks/my-tasks - get all tasks accepted by logged in user
+/// ================= MY ASSIGNED TASKS =================
 export const getMyAcceptedTasks = async (req, res) => {
   try {
-    const tasks = await Task.find({ acceptedBy: req.user.id })
+    const tasks = await Task.find({ assignedTo: req.user.id }) // ✅ FIXED
       .populate("poster", "name avatar")
       .sort({ createdAt: -1 });
 
-    if (tasks.length === 0) {
-      return res.json({ message: "No tasks found" });
-    }
-
     res.json({ tasks });
-
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-
-// PUT /api/tasks/:id/accept - accept a task
-export const acceptTask = async (req, res) => {
-  try {
-    const task = await Task.findById(req.params.id);
-
-    if (!task) {
-      return res.status(404).json({ message: "Task not found" });
-    }
-
-    if (task.status === "taken" || task.status === "ongoing") {
-      return res.status(400).json({ message: "Task has already been taken" });
-    }
-
-    if (task.poster.toString() === req.user.id) {
-      return res.status(400).json({ message: "You cannot accept your own task" });
-    }
-
-    task.status = "ongoing";
-    task.acceptedBy = req.user.id;
-    await task.save();
-
-    await task.populate("poster", "name avatar");
-    await task.populate("acceptedBy", "name avatar");
-
-    res.json({
-      message: "Task accepted successfully",
-      task,
-    });
-
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-
-// GET /api/tasks/categories - get all categories
-export const getCategories = async (req, res) => {
-  res.json({ categories: TASK_CATEGORIES });
-};
-
-
-// PUT /api/tasks/:id/complete - poster marks task as completed
+/// ================= COMPLETE TASK =================
 export const completeTask = async (req, res) => {
   try {
     const task = await Task.findById(req.params.id);
 
-    if (!task) {
-      return res.status(404).json({ message: "Task not found" });
-    }
+    if (!task) return res.status(404).json({ message: "Task not found" });
 
-    // only the poster can mark as completed
     if (task.poster.toString() !== req.user.id) {
-      return res.status(403).json({ message: "Only the task poster can mark it as completed" });
+      return res
+        .status(403)
+        .json({ message: "Only the poster can complete this task" });
     }
 
     if (task.status !== "ongoing") {
-      return res.status(400).json({ message: "Task must be ongoing to mark as completed" });
+      return res
+        .status(400)
+        .json({ message: "Task must be ongoing to complete" });
     }
 
     task.status = "completed";
     await task.save();
 
     res.json({
-      message: "Task marked as completed. You can now rate the worker",
+      message: "Task marked as completed",
       task,
     });
-
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-
-// POST /api/tasks/:id/rate - poster rates the worker
+/// ================= RATE WORKER =================
 export const rateWorker = async (req, res) => {
   try {
     const { score, review } = req.body;
     const task = await Task.findById(req.params.id);
 
-    if (!task) {
-      return res.status(404).json({ message: "Task not found" });
-    }
+    if (!task) return res.status(404).json({ message: "Task not found" });
 
-    // only the poster can rate
     if (task.poster.toString() !== req.user.id) {
-      return res.status(403).json({ message: "Only the task poster can rate the worker" });
+      return res.status(403).json({ message: "Not authorized" });
     }
 
     if (task.status !== "completed") {
-      return res.status(400).json({ message: "Task must be completed before rating" });
+      return res
+        .status(400)
+        .json({ message: "Task must be completed before rating" });
     }
 
-    if (task.rating.score !== null) {
-      return res.status(400).json({ message: "You have already rated this task" });
+    if (!task.assignedTo) {
+      return res.status(400).json({ message: "No worker assigned" });
     }
 
-    if (!score || score < 1 || score > 5) {
-      return res.status(400).json({ message: "Score must be between 1 and 5" });
-    }
-
-    // save rating on task
+    // save rating
     task.rating.score = score;
     task.rating.review = review || null;
     task.rating.ratedAt = new Date();
     await task.save();
 
-    // update worker's overall rating
-    const worker = await User.findById(task.acceptedBy);
-    const currentTotal = worker.rating.average * worker.rating.count;
-    const newCount = worker.rating.count + 1;
-    const newAverage = (currentTotal + score) / newCount;
+    // update worker rating
+    const worker = await User.findById(task.assignedTo); // ✅ FIXED
 
-    worker.rating.average = Math.round(newAverage * 10) / 10; // 1 decimal e.g 4.5
+    const total = worker.rating.average * worker.rating.count;
+    const newCount = worker.rating.count + 1;
+    const newAverage = (total + score) / newCount;
+
+    worker.rating.average = Math.round(newAverage * 10) / 10;
     worker.rating.count = newCount;
+
     await worker.save();
 
     res.json({
@@ -218,103 +162,22 @@ export const rateWorker = async (req, res) => {
       rating: task.rating,
       workerOverallRating: worker.rating,
     });
-
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-
-// GET /api/tasks/ongoing - get ongoing tasks for logged in user (acceptedBy)
-export const getOngoingTasks = async (req, res) => {
-  try {
-    const tasks = await Task.find({
-      acceptedBy: req.user.id,
-      status: "ongoing",
-    }).populate("poster", "name avatar").sort({ createdAt: -1 });
-
-    if (tasks.length === 0) {
-      return res.json({ message: "No ongoing tasks" });
-    }
-
-    res.json({ tasks });
-
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-
-// GET /api/tasks/completed - get completed tasks for logged in user with ratings
-export const getCompletedTasks = async (req, res) => {
-  try {
-    const tasks = await Task.find({
-      acceptedBy: req.user.id,
-      status: "completed",
-    }).populate("poster", "name avatar").sort({ createdAt: -1 });
-
-    if (tasks.length === 0) {
-      return res.json({ message: "No completed tasks" });
-    }
-
-    res.json({ tasks });
-
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-
-// Get single task by ID (includes hasApplied for current user)
-export const getTaskById = async (req, res) => {
-  try {
-    const task = await Task.findById(req.params.id);
-    if (!task) return res.status(404).json({ message: "Task not found" });
-
-    const hasApplied = task.applicants?.some(
-      (id) => id.toString() === req.user.id
-    ) ?? false;
-
-    res.status(200).json({ ...task.toObject(), hasApplied });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-// Get all applicants for a task (for poster to review and assign)
-export const getTaskApplicants = async (req, res) => {
-  try {
-    const task = await Task.findById(req.params.id).populate(
-      "applicants",
-      "name email phone"
-    );
-    if (!task) return res.status(404).json({ message: "Task not found" });
-
-    res.status(200).json({ applicants: task.applicants });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-
-
-// Applicant applies for a task
+/// ================= APPLY FOR TASK =================
 export const applyForTask = async (req, res) => {
   try {
-    console.log("USER:", req.user.id);
-    console.log("TASK ID:", req.params.id);
-
     const task = await Task.findById(req.params.id);
     if (!task) return res.status(404).json({ message: "Task not found" });
 
-    console.log("TASK STATUS:", task.status);
-
-    // ✅ FIX: allow only open tasks
     if (task.status !== "open") {
       return res.status(400).json({ message: "Task is no longer open" });
     }
 
-    const alreadyApplied = task.applicants?.some(
+    const alreadyApplied = task.applicants.some(
       (id) => id.toString() === req.user.id
     );
 
@@ -325,33 +188,80 @@ export const applyForTask = async (req, res) => {
     task.applicants.push(req.user.id);
     await task.save();
 
-    res.status(200).json({
+    res.json({
       message: "Applied successfully",
       hasApplied: true,
-      taskId: task._id,
     });
   } catch (err) {
-    console.log("APPLY ERROR:", err);
     res.status(500).json({ message: err.message });
   }
 };
 
-// Poster assigns task to a specific applicant
+/// ================= ASSIGN TASK =================
 export const assignTask = async (req, res) => {
   try {
     const { applicantId } = req.body;
     const task = await Task.findById(req.params.id);
 
     if (!task) return res.status(404).json({ message: "Task not found" });
-   if (task.poster.toString() !== req.user.id)
+
+    if (task.poster.toString() !== req.user.id) {
       return res.status(403).json({ message: "Not authorized" });
+    }
 
     task.status = "assigned";
     task.assignedTo = applicantId;
+
     await task.save();
 
-    res.status(200).json({ message: "Task assigned successfully", task });
+    res.json({
+      message: "Task assigned successfully",
+      task,
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
+};
+
+/// ================= GET TASK BY ID =================
+export const getTaskById = async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id)
+      .populate("poster", "name avatar")
+      .populate("assignedTo", "name avatar");
+
+    if (!task) return res.status(404).json({ message: "Task not found" });
+
+    const hasApplied = task.applicants.some(
+      (id) => id.toString() === req.user.id
+    );
+
+    res.json({
+      ...task.toObject(),
+      hasApplied,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/// ================= GET APPLICANTS =================
+export const getTaskApplicants = async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id).populate(
+      "applicants",
+      "name email phone"
+    );
+
+    if (!task) return res.status(404).json({ message: "Task not found" });
+
+    res.json({ applicants: task.applicants });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+/// ================= CATEGORIES =================
+export const getCategories = async (req, res) => {
+  res.json({ categories: TASK_CATEGORIES });
 };
