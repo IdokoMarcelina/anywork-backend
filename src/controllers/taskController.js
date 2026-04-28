@@ -263,3 +263,80 @@ export const getCompletedTasks = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+
+// Get single task by ID (includes hasApplied for current user)
+export const getTaskById = async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id);
+    if (!task) return res.status(404).json({ message: "Task not found" });
+
+    const hasApplied = task.applicants?.some(
+      (id) => id.toString() === req.user.id
+    ) ?? false;
+
+    res.status(200).json({ ...task.toObject(), hasApplied });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Get all applicants for a task (for poster to review and assign)
+export const getTaskApplicants = async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id).populate(
+      "applicants",
+      "name email phone"
+    );
+    if (!task) return res.status(404).json({ message: "Task not found" });
+
+    res.status(200).json({ applicants: task.applicants });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+
+// Applicant applies for a task
+export const applyForTask = async (req, res) => {
+  try {
+    const task = await Task.findById(req.params.id);
+    if (!task) return res.status(404).json({ message: "Task not found" });
+    if (task.status !== "open")
+      return res.status(400).json({ message: "Task is no longer open" });
+
+    const alreadyApplied = task.applicants?.some(
+      (id) => id.toString() === req.user.id
+    );
+    if (alreadyApplied)
+      return res.status(400).json({ message: "Already applied" });
+
+    task.applicants.push(req.user.id);
+    await task.save();
+
+    res.status(200).json({ message: "Applied successfully", hasApplied: true });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Poster assigns task to a specific applicant
+export const assignTask = async (req, res) => {
+  try {
+    const { applicantId } = req.body;
+    const task = await Task.findById(req.params.id);
+
+    if (!task) return res.status(404).json({ message: "Task not found" });
+    if (task.postedBy.toString() !== req.user.id)
+      return res.status(403).json({ message: "Not authorized" });
+
+    task.status = "assigned";
+    task.assignedTo = applicantId;
+    await task.save();
+
+    res.status(200).json({ message: "Task assigned successfully", task });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
