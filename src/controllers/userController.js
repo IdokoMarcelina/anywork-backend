@@ -91,11 +91,7 @@ export const getMe = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.json({
-      token,
-      user,
-      
-    });
+    res.json({ user }); // ← just send user, token is not needed here
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
