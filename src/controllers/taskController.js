@@ -301,22 +301,37 @@ export const getTaskApplicants = async (req, res) => {
 // Applicant applies for a task
 export const applyForTask = async (req, res) => {
   try {
+    console.log("USER:", req.user.id);
+    console.log("TASK ID:", req.params.id);
+
     const task = await Task.findById(req.params.id);
     if (!task) return res.status(404).json({ message: "Task not found" });
-    if (task.status !== "open")
+
+    console.log("TASK STATUS:", task.status);
+
+    // ✅ FIX: allow only open tasks
+    if (task.status !== "open") {
       return res.status(400).json({ message: "Task is no longer open" });
+    }
 
     const alreadyApplied = task.applicants?.some(
       (id) => id.toString() === req.user.id
     );
-    if (alreadyApplied)
+
+    if (alreadyApplied) {
       return res.status(400).json({ message: "Already applied" });
+    }
 
     task.applicants.push(req.user.id);
     await task.save();
 
-    res.status(200).json({ message: "Applied successfully", hasApplied: true });
+    res.status(200).json({
+      message: "Applied successfully",
+      hasApplied: true,
+      taskId: task._id,
+    });
   } catch (err) {
+    console.log("APPLY ERROR:", err);
     res.status(500).json({ message: err.message });
   }
 };

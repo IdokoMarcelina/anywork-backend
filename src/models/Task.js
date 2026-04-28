@@ -24,7 +24,7 @@ const taskSchema = new mongoose.Schema({
     enum: ["open", "assigned", "ongoing", "completed"],
     default: "open",
   },
-  acceptedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+  // acceptedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
   applicants: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],   // ← new
   assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }, // ← new
   rating: {
