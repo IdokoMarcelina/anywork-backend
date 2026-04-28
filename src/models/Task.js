@@ -1,6 +1,13 @@
 import mongoose from "mongoose";
 
-const CATEGORIES = ["Cleaning", "Delivery", "Errands", "Handy Work", "Shopping", "Moving", "Tutoring", "Other"];
+const CATEGORIES = [
+  "Cleaning",
+  "Delivery", 
+  "Errands",
+  "Handyman", 
+  "Tutoring",
+  "Other"
+];
 
 const taskSchema = new mongoose.Schema({
   poster: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
@@ -8,10 +15,10 @@ const taskSchema = new mongoose.Schema({
   description: { type: String, required: true },
   budget: {
     amount: { type: Number, required: true },
-    type: { type: String, enum: ["Fixed", "Hourly"], default: "Fixed" },
+    type: { type: String, enum: ["fixed", "hourly"], default: "fixed" },
   },
   location: { type: String, required: true },
-  deadline: { type: Date, required: true },
+  deadline: { type: Date, required: false },
   status: { type: String, enum: ["open", "taken", "completed"], default: "open" },
   acceptedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     rating: {
