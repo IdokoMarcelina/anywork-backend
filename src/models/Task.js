@@ -2,9 +2,9 @@ import mongoose from "mongoose";
 
 const CATEGORIES = [
   "Cleaning",
-  "Delivery", 
+  "Delivery",
   "Errands",
-  "Handyman", 
+  "Handyman",
   "Tutoring",
   "Other"
 ];
@@ -19,9 +19,15 @@ const taskSchema = new mongoose.Schema({
   },
   location: { type: String, required: true },
   deadline: { type: Date, required: false },
-  status: { type: String, enum: ["open", "taken", "completed"], default: "open" },
+  status: {
+    type: String,
+    enum: ["open", "assigned", "ongoing", "completed"],
+    default: "open",
+  },
   acceptedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
-    rating: {
+  applicants: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],   // ← new
+  assignedTo: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }, // ← new
+  rating: {
     score: { type: Number, min: 1, max: 5, default: null },
     review: { type: String, default: null },
     ratedAt: { type: Date, default: null },

@@ -328,7 +328,7 @@ export const assignTask = async (req, res) => {
     const task = await Task.findById(req.params.id);
 
     if (!task) return res.status(404).json({ message: "Task not found" });
-    if (task.postedBy.toString() !== req.user.id)
+   if (task.poster.toString() !== req.user.id)
       return res.status(403).json({ message: "Not authorized" });
 
     task.status = "assigned";
