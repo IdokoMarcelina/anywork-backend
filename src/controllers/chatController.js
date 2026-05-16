@@ -88,6 +88,77 @@ export const getMessages = async (req, res) => {
 };
 
 
+// POST /api/chat/conversations/:conversationId/messages - send a message
+export const sendMessage = async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    const { text, imageBase64 } = req.body;
+    const myId = req.user.id;
+
+    // verify sender is part of conversation
+    const conversation = await Conversation.findOne({
+      _id: conversationId,
+      participants: myId,
+    });
+
+    if (!conversation) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    if (!text && !imageBase64) {
+      return res.status(400).json({ message: "Message cannot be empty" });
+    }
+
+    let imageUrl = null;
+    if (imageBase64) {
+      const uploadResult = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: "anywork/chat" },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
+        const buffer = Buffer.from(base64Data, "base64");
+        stream.end(buffer);
+      });
+      imageUrl = uploadResult.secure_url;
+    }
+
+    const message = await Message.create({
+      conversation: conversationId,
+      sender: myId,
+      text: text || null,
+      image: imageUrl,
+      readBy: [myId],
+    });
+
+    await message.populate("sender", "name avatar");
+
+    await Conversation.findByIdAndUpdate(conversationId, {
+      lastMessage: message._id,
+      lastMessageAt: new Date(),
+    });
+
+    // broadcast via socket for real-time delivery
+    const io = req.app.get("io");
+    io.to(conversationId).emit("new_message", message);
+    conversation.participants.forEach((participantId) => {
+      if (participantId.toString() !== myId) {
+        io.to(participantId.toString()).emit("message_notification", {
+          conversationId,
+          message,
+        });
+      }
+    });
+
+    res.status(201).json({ message });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // GET /api/chat/unread - get unread message count
 export const getUnreadCount = async (req, res) => {
   try {

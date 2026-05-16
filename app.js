@@ -22,7 +22,8 @@ configureCloudinary();
 
 const app = express();
 const httpServer = createServer(app); // ← wrap express in http server
-initSocket(httpServer);    
+const io = initSocket(httpServer);    
+app.set("io", io); // make io accessible in controllers
 
 app.use(cors());
 app.use(express.json({ limit: "10mb" })); // ← increase limit for base64 images
