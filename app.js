@@ -5,8 +5,8 @@ import express from "express";
 import cors from "cors";
 import { createServer } from "http"; // ← add this
 import connectDB from "./src/config/connectDb.js";
-// import swaggerUi from "swagger-ui-express";
-// import swaggerSpec from "./src/config/swagger.js";
+import swaggerUi from "swagger-ui-express";
+import swaggerSpec from "./src/config/swagger.js";
 
 
 import authRoute from "./src/routes/authRoute.js"
@@ -28,7 +28,7 @@ app.set("io", io); // make io accessible in controllers
 app.use(cors());
 app.use(express.json({ limit: "10mb" })); // ← increase limit for base64 images
 
-// app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 
 app.use("/api/auth", authRoute);

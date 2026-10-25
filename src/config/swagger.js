@@ -1,5 +1,7 @@
 import swaggerJsDoc from "swagger-jsdoc";
 
+const PORT = process.env.PORT || 3000;
+
 const options = {
   definition: {
     openapi: "3.0.0",
@@ -10,7 +12,7 @@ const options = {
     },
     servers: [
       {
-        url: "http://localhost:5000", // match your actual PORT
+        url: `http://localhost:${PORT}`,
       },
     ],
   },
@@ -19,4 +21,4 @@ const options = {
 
 const swaggerSpec = swaggerJsDoc(options);
 
-export default swaggerSpec;  // ← was module.exports
+export default swaggerSpec;

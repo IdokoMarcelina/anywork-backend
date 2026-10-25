@@ -1,5 +1,5 @@
 import express from "express";
-import { login, signup, verifyUser } from "../controllers/authController.js";
+import { login, signup } from "../controllers/authController.js";
 
 const router = express.Router();
 
@@ -16,7 +16,7 @@ const router = express.Router();
  *   post:
  *     summary: Register a new user
  *     tags: [Auth]
- *     description: Create account and receive OTP
+ *     description: Create account and receive JWT token immediately (no OTP required)
  *     requestBody:
  *       required: true
  *       content:
@@ -39,44 +39,11 @@ const router = express.Router();
  *                 example: 123456
  *     responses:
  *       201:
- *         description: User created. Verify OTP
+ *         description: Account created, token returned
  *       400:
- *         description: User already exists
+ *         description: User already exists or missing fields
  */
 router.post("/signup", signup);
-
-/**
- * @swagger
- * /api/auth/verify:
- *   post:
- *     summary: Verify user OTP
- *     tags: [Auth]
- *     description: Verify user account using OTP sent to email
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *               - otp
- *             properties:
- *               email:
- *                 type: string
- *                 example: john@gmail.com
- *               otp:
- *                 type: string
- *                 example: 123456
- *     responses:
- *       200:
- *         description: Account verified successfully
- *       400:
- *         description: Invalid or expired OTP
- *       404:
- *         description: User not found
- */
-router.post("/verify", verifyUser);
 
 /**
  * @swagger
@@ -105,7 +72,7 @@ router.post("/verify", verifyUser);
  *       200:
  *         description: Login successful
  *       400:
- *         description: Invalid credentials or unverified account
+ *         description: Invalid credentials
  */
 router.post("/login", login);
 
